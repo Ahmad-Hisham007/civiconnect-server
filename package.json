@@ -6,8 +6,17 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ahmad-Hisham007/civiconnect-server.git"
+  },
+  "keywords": [],
   "author": "",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ahmad-Hisham007/civiconnect-server/issues"
+  },
+  "homepage": "https://github.com/Ahmad-Hisham007/civiconnect-server#readme",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
