@@ -27,6 +27,7 @@ async function run() {
     await client.connect();
     const db = client.db("Civiconnect_events");
     const usersCollection = db.collection("Users");
+    const eventsCollection = db.collection("events");
 
     app.get("/users", async (req, res) => {
       const cursor = usersCollection.find();
@@ -49,10 +50,33 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/events", async (req, res) => {
+      const filterDate = req.query.filterDate;
+      let cursor;
+      if (filterDate) {
+        cursor = eventsCollection
+          .find({
+            date: { $gte: filterDate },
+          })
+          .sort({ date: 1 });
+      } else {
+        cursor = eventsCollection.find();
+      }
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
+
+    app.post("/events", async (req, res) => {
+      const newEvent = req.body;
+      const result = await eventsCollection.insertOne(newEvent);
+      console.log(result);
+      res.send(result);
+    });
   } finally {
     // await client.close();
   }
