@@ -2,7 +2,7 @@
 import "dotenv/config";
 import express, { json } from "express";
 import cors from "cors";
-import { MongoClient, ServerApiVersion } from "mongodb";
+import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -28,6 +28,7 @@ async function run() {
     const db = client.db("Civiconnect_events");
     const usersCollection = db.collection("Users");
     const eventsCollection = db.collection("events");
+    const joinedEventsColl = db.collection("joinedEvents");
 
     app.get("/users", async (req, res) => {
       const cursor = usersCollection.find();
@@ -60,10 +61,35 @@ async function run() {
           })
           .sort({ date: 1 });
       } else {
-        cursor = eventsCollection.find();
+        cursor = eventsCollection.find().sort({ date: 1 });
       }
       const result = await cursor.toArray();
       res.send(result);
+    });
+
+    app.get("/events/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+
+        const event = await eventsCollection.findOne(query);
+
+        if (!event) {
+          res.status(404).json({ error: "Event not found" });
+        }
+
+        const organizer = await usersCollection.findOne({
+          email: event.organizer,
+        });
+
+        const result = {
+          ...event,
+          organizerDetails: organizer || null,
+        };
+        res.send(result);
+      } catch (error) {
+        res.status(500).json({ error: "Server error" });
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
@@ -77,6 +103,103 @@ async function run() {
       console.log(result);
       res.send(result);
     });
+
+    app.get("/joined-events", async (req, res) => {
+      try {
+        const queryEmail = req.query.email;
+        const query = { currentUser: queryEmail };
+        const cursor = joinedEventsColl.find(query);
+        const result = await cursor.toArray();
+
+        if (result.length === 0) {
+          return res.status(404).send({ error: "User has no joined events" });
+        }
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).json({ error: "Server error" });
+      }
+    });
+
+    app.post("/joined-events", async (req, res) => {
+      try {
+        const newJoinedEvent = req.body;
+
+        // Check if already joined
+        const alreadyJoined = await joinedEventsColl.findOne({
+          eventId: newJoinedEvent.eventId,
+          currentUser: newJoinedEvent.currentUser,
+        });
+        if (alreadyJoined) {
+          return res
+            .status(409)
+            .send({ error: "User already joined this event" });
+        }
+
+        const joinedEvent = {
+          ...newJoinedEvent,
+          joinedAt: new Date().toISOString(),
+        };
+
+        await Promise.all([
+          usersCollection.updateOne(
+            { email: newJoinedEvent.currentUser },
+            {
+              $addToSet: {
+                joinedEventIds: newJoinedEvent.eventId,
+              },
+            }
+          ),
+          eventsCollection.updateOne(
+            { _id: new ObjectId(newJoinedEvent.eventId) },
+            {
+              $addToSet: {
+                registeredUsers: newJoinedEvent.currentUser,
+              },
+            }
+          ),
+        ]);
+        const result = await joinedEventsColl.insertOne(joinedEvent);
+        console.log(result);
+        res.send(result);
+      } catch (error) {
+        console.error("Error in joined-events:", error);
+        res.status(500).json({
+          error: "Failed to join event",
+          details: error.message,
+        });
+      }
+    });
+    // // Migration script for mixed years (2025 and 2026)
+    // app.get("/fix-dates", async (req, res) => {
+    //   const dateMappings = {
+    //     "15-03-2025": "2025-03-15",
+    //     "22-04-2026": "2026-04-22",
+    //     "05-08-2026": "2026-05-08",
+    //     "18-06-2026": "2026-06-18",
+    //     "07-05-2026": "2026-07-05",
+    //     "12-08-2026": "2026-08-12",
+    //   };
+
+    //   const events = await eventsCollection.find().toArray();
+    //   let updatedCount = 0;
+
+    //   for (const event of events) {
+    //     const newDate = dateMappings[event.date];
+    //     if (newDate) {
+    //       await eventsCollection.updateOne(
+    //         { _id: event._id },
+    //         { $set: { date: newDate } }
+    //       );
+    //       updatedCount++;
+    //       console.log(`Updated ${event.title}: ${event.date} → ${newDate}`);
+    //     } else {
+    //       console.log(`No mapping found for: ${event.date}`);
+    //     }
+    //   }
+
+    //   res.send(`Updated ${updatedCount} events. Check console for details.`);
+    // });
   } finally {
     // await client.close();
   }
