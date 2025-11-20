@@ -53,17 +53,28 @@ async function run() {
 
     app.get("/events", async (req, res) => {
       const filterDate = req.query.filterDate;
-      let cursor;
+      const eventType = req.query.type;
+      const search = req.query.search;
+      let query = {};
       if (filterDate) {
-        cursor = eventsCollection
-          .find({
-            date: { $gte: filterDate },
-          })
-          .sort({ date: 1 });
-      } else {
-        cursor = eventsCollection.find().sort({ date: 1 });
+        query.date = { $gte: filterDate };
       }
+
+      if (eventType && eventType !== "all") {
+        query.type = eventType;
+      }
+
+      if (search) {
+        query.title = { $regex: search, $options: "i" };
+      }
+      console.log("Final query:", query);
+      let cursor = eventsCollection.find(query).sort({ date: 1 });
+
       const result = await cursor.toArray();
+      console.log(result);
+      if (result.length === 0) {
+        return res.status(404).send({ error: "No events found" });
+      }
       res.send(result);
     });
 
