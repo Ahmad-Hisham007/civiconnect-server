@@ -91,11 +91,25 @@ async function run() {
         res.status(500).json({ error: "Server error" });
       }
     });
+    app.put("/events/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const updates = req.body;
 
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+        const result = await eventsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updates }
+        );
+
+        if (result.matchedCount === 0) {
+          return res.status(404).send({ error: "Event not found" });
+        }
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).json({ error: "Server error" });
+      }
+    });
 
     app.post("/events", async (req, res) => {
       const newEvent = req.body;
@@ -170,6 +184,25 @@ async function run() {
         });
       }
     });
+
+    app.get("/manage-events", async (req, res) => {
+      try {
+        const queryEmail = req.query.email;
+        const query = {
+          organizer: queryEmail,
+        };
+        const cursor = eventsCollection.find(query);
+        const result = await cursor.toArray();
+
+        if (result.length === 0) {
+          return res.status(404).send({ error: "User has no joined events" });
+        }
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).json({ error: "Server error" });
+      }
+    });
     // // Migration script for mixed years (2025 and 2026)
     // app.get("/fix-dates", async (req, res) => {
     //   const dateMappings = {
@@ -200,6 +233,10 @@ async function run() {
 
     //   res.send(`Updated ${updatedCount} events. Check console for details.`);
     // });
+    await client.db("admin").command({ ping: 1 });
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
   } finally {
     // await client.close();
   }
