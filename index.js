@@ -281,6 +281,16 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Server started on http://localhost:${port}`);
-});
+// app.listen(port, () => {
+//   console.log(`🚀 Server started on http://localhost:${port}`);
+// });
+
+// For Vercel serverless
+export default app;
+
+// Only listen locally, not in production
+if (process.env.NODE_ENV !== "production") {
+  app.listen(port, () => {
+    console.log(`🚀 Server started on http://localhost:${port}`);
+  });
+}
