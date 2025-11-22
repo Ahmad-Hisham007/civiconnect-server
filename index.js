@@ -195,7 +195,7 @@ app.post("/events", ensureDBConnection, async (req, res) => {
   res.send(result);
 });
 
-app.get("/joined-events", ensureDBConnectio, async (req, res) => {
+app.get("/joined-events", ensureDBConnection, async (req, res) => {
   try {
     const queryEmail = req.query.email;
     const query = { currentUser: queryEmail };
