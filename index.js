@@ -52,6 +52,9 @@ async function run() {
     });
 
     app.get("/events", async (req, res) => {
+      if (!eventsCollection) {
+        return res.status(500).json({ error: "Database not connected" });
+      }
       const filterDate = req.query.filterDate;
       const eventType = req.query.type;
       const search = req.query.search;
@@ -253,6 +256,21 @@ async function run() {
     // console.log(
     //   "Pinged your deployment. You successfully connected to MongoDB!"
     // );
+    // Add this simple test route (NO DATABASE)
+    app.get("/test", (req, res) => {
+      res.json({ message: "API is working!" });
+    });
+
+    // Add this to check database
+    app.get("/health", async (req, res) => {
+      try {
+        const db = client.db("Civiconnect_events");
+        await db.command({ ping: 1 });
+        res.json({ database: "connected" });
+      } catch (error) {
+        res.json({ database: "disconnected", error: error.message });
+      }
+    });
   } finally {
     // await client.close();
   }
