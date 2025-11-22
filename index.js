@@ -23,6 +23,7 @@ const client = new MongoClient(uri, {
 
 // Initialize collections
 let db, usersCollection, eventsCollection, joinedEventsColl;
+let isDBConnected = false;
 // Database connection function
 async function connectDB() {
   try {
@@ -31,9 +32,11 @@ async function connectDB() {
     usersCollection = db.collection("Users");
     eventsCollection = db.collection("events");
     joinedEventsColl = db.collection("joinedEvents");
+    isDBConnected = true;
     console.log("✅ Connected to MongoDB");
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error);
+    isDBConnected = false;
   }
 }
 
@@ -41,6 +44,26 @@ async function connectDB() {
 connectDB();
 
 // Simple test routes (NO DATABASE)
+
+// Database connection middleware
+async function ensureDBConnection(req, res, next) {
+  if (!isDBConnected) {
+    try {
+      await connectDB();
+    } catch (error) {
+      return res.status(500).json({
+        error: "Database connection failed",
+        details: error.message,
+      });
+    }
+  }
+}
+
+if (!usersCollection || !eventsCollection) {
+  return res
+    .status(500)
+    .json({ error: "Database collections not initialized" });
+}
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
@@ -63,13 +86,13 @@ app.get("/health", async (req, res) => {
   }
 });
 
-app.get("/users", async (req, res) => {
+app.get("/users", ensureDBConnection, async (req, res) => {
   const cursor = usersCollection.find();
   const result = await cursor.toArray();
   res.send(result);
 });
 
-app.post("/users", async (req, res) => {
+app.post("/users", ensureDBConnection, async (req, res) => {
   const newUser = req.body;
   const email = newUser.email;
   const query = { email: email };
@@ -84,7 +107,7 @@ app.post("/users", async (req, res) => {
   res.send(result);
 });
 
-app.get("/events", async (req, res) => {
+app.get("/events", ensureDBConnection, async (req, res) => {
   if (!eventsCollection) {
     return res.status(500).json({ error: "Database not connected" });
   }
@@ -114,7 +137,7 @@ app.get("/events", async (req, res) => {
   res.send(result);
 });
 
-app.get("/events/:id", async (req, res) => {
+app.get("/events/:id", ensureDBConnection, async (req, res) => {
   try {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
@@ -138,7 +161,7 @@ app.get("/events/:id", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-app.put("/events/:id", async (req, res) => {
+app.put("/events/:id", ensureDBConnection, async (req, res) => {
   try {
     const id = req.params.id;
     const updates = req.body;
@@ -163,14 +186,14 @@ app.put("/events/:id", async (req, res) => {
   }
 });
 
-app.post("/events", async (req, res) => {
+app.post("/events", ensureDBConnection, async (req, res) => {
   const newEvent = req.body;
   const result = await eventsCollection.insertOne(newEvent);
   console.log(result);
   res.send(result);
 });
 
-app.get("/joined-events", async (req, res) => {
+app.get("/joined-events", ensureDBConnectio, async (req, res) => {
   try {
     const queryEmail = req.query.email;
     const query = { currentUser: queryEmail };
@@ -187,7 +210,7 @@ app.get("/joined-events", async (req, res) => {
   }
 });
 
-app.post("/joined-events", async (req, res) => {
+app.post("/joined-events", ensureDBConnection, async (req, res) => {
   try {
     const newJoinedEvent = req.body;
 
@@ -235,7 +258,7 @@ app.post("/joined-events", async (req, res) => {
   }
 });
 
-app.get("/manage-events", async (req, res) => {
+app.get("/manage-events", ensureDBConnection, async (req, res) => {
   try {
     const queryEmail = req.query.email;
     const query = {
