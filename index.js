@@ -57,12 +57,14 @@ async function ensureDBConnection(req, res, next) {
       });
     }
   }
-}
 
-if (!usersCollection || !eventsCollection) {
-  return res
-    .status(500)
-    .json({ error: "Database collections not initialized" });
+  if (!usersCollection || !eventsCollection) {
+    return res
+      .status(500)
+      .json({ error: "Database collections not initialized" });
+  }
+
+  next();
 }
 
 app.get("/", (req, res) => {
@@ -276,76 +278,6 @@ app.get("/manage-events", ensureDBConnection, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-// async function run() {
-//   try {
-//     await client.connect();
-//     const db = client.db("Civiconnect_events");
-//     const usersCollection = db.collection("Users");
-//     const eventsCollection = db.collection("events");
-//     const joinedEventsColl = db.collection("joinedEvents");
-
-// // Migration script for mixed years (2025 and 2026)
-// app.get("/fix-dates", async (req, res) => {
-//   const dateMappings = {
-//     "15-03-2025": "2025-03-15",
-//     "22-04-2026": "2026-04-22",
-//     "05-08-2026": "2026-05-08",
-//     "18-06-2026": "2026-06-18",
-//     "07-05-2026": "2026-07-05",
-//     "12-08-2026": "2026-08-12",
-//   };
-
-//   const events = await eventsCollection.find().toArray();
-//   let updatedCount = 0;
-
-//   for (const event of events) {
-//     const newDate = dateMappings[event.date];
-//     if (newDate) {
-//       await eventsCollection.updateOne(
-//         { _id: event._id },
-//         { $set: { date: newDate } }
-//       );
-//       updatedCount++;
-//       console.log(`Updated ${event.title}: ${event.date} → ${newDate}`);
-//     } else {
-//       console.log(`No mapping found for: ${event.date}`);
-//     }
-//   }
-
-//   res.send(`Updated ${updatedCount} events. Check console for details.`);
-// });
-// await client.db("admin").command({ ping: 1 });
-// console.log(
-//   "Pinged your deployment. You successfully connected to MongoDB!"
-// );
-// Add this simple test route (NO DATABASE)
-//   app.get("/test", (req, res) => {
-//     res.json({ message: "API is working!" });
-//   });
-
-//   // Add this to check database
-//   app.get("/health", async (req, res) => {
-//     try {
-//       const db = client.db("Civiconnect_events");
-//       await db.command({ ping: 1 });
-//       res.json({ database: "connected" });
-//     } catch (error) {
-//       res.json({ database: "disconnected", error: error.message });
-//     }
-//   });
-// } finally {
-//   // await client.close();
-// }
-// }
-// run().catch(console.dir);
-
-// app.get("/", (req, res) => {
-//   res.send("Hello World!");
-// });
-
-// app.listen(port, () => {
-//   console.log(`🚀 Server started on http://localhost:${port}`);
-// });
 
 // For Vercel serverless
 export default app;
