@@ -249,10 +249,10 @@ async function run() {
 
     //   res.send(`Updated ${updatedCount} events. Check console for details.`);
     // });
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // await client.close();
   }
