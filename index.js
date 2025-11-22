@@ -107,6 +107,11 @@ async function run() {
         const id = req.params.id;
         const updates = req.body;
 
+        const joinedUpdate = await joinedEventsColl.updateMany(
+          { eventId: id },
+          { $set: updates }
+        );
+        console.log(joinedUpdate);
         const result = await eventsCollection.updateOne(
           { _id: new ObjectId(id) },
           { $set: updates }
