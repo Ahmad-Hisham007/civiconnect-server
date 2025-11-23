@@ -270,7 +270,7 @@ app.get("/manage-events", ensureDBConnection, async (req, res) => {
     const result = await cursor.toArray();
 
     if (result.length === 0) {
-      return res.status(404).send({ error: "User has no joined events" });
+      return res.status(404).send({ error: "User has no events" });
     }
 
     res.send(result);
